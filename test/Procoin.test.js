@@ -1,4 +1,4 @@
-import assertRevert from './helpers/assert_revert';
+import assertRevert from './helpers/assertRevert';
 
 const Procoin = artifacts.require("Procoin");
 
