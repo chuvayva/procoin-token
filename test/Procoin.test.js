@@ -9,8 +9,8 @@ contract('Procoin methods', async (accounts) => {
 
   beforeEach(async function() {
     procoin = await Procoin.deployed();
-    initBalanceOne = await procoin.balanceOf.call(accounts[0]);
-    initBalanceTwo = await procoin.balanceOf.call(accounts[1]);
+    initBalanceOne = await procoin.balanceOf(accounts[0]);
+    initBalanceTwo = await procoin.balanceOf(accounts[1]);
   });
 
   it("#mintToken", async () => {
@@ -18,11 +18,11 @@ contract('Procoin methods', async (accounts) => {
 
     await procoin.mintToken(accounts[1], amount, { from: accounts[0] });
 
-    let balanceOne = await procoin.balanceOf.call(accounts[0]);
-    let balanceTwo = await procoin.balanceOf.call(accounts[1]);
+    let balanceOne = await procoin.balanceOf(accounts[0]);
+    let balanceTwo = await procoin.balanceOf(accounts[1]);
 
-    assert.equal(balanceOne.toNumber() - initBalanceOne, 0);
-    assert.equal(balanceTwo.toNumber() - initBalanceTwo, amount);
+    assert.equal(balanceOne - initBalanceOne, 0);
+    assert.equal(balanceTwo - initBalanceTwo, amount);
   });
 
   it("#freezeAccount", async () => {
@@ -31,10 +31,10 @@ contract('Procoin methods', async (accounts) => {
     await procoin.freezeAccount(accounts[1], true, { from: accounts[0] });
     await assertRevert(procoin.transfer(accounts[0], amount, { from: accounts[1] }));
 
-    let balanceOne = await procoin.balanceOf.call(accounts[0]);
-    let balanceTwo = await procoin.balanceOf.call(accounts[1]);
+    let balanceOne = await procoin.balanceOf(accounts[0]);
+    let balanceTwo = await procoin.balanceOf(accounts[1]);
 
-    assert.equal(balanceOne.toNumber(), initBalanceOne.toNumber());
-    assert.equal(balanceTwo.toNumber(), initBalanceTwo.toNumber());
+    assert.equal(+balanceOne, +initBalanceOne);
+    assert.equal(+balanceTwo, +initBalanceTwo);
   });
 })
