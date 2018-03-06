@@ -1,5 +1,7 @@
 pragma solidity ^0.4.16;
 
+import "./IProcoinDB.sol";
+
 contract TokenERC20 {
     // Public variables of the token
     string public name;
@@ -7,9 +9,7 @@ contract TokenERC20 {
     uint8 public decimals = 0;
     uint256 public totalSupply;
 
-    // This creates an array with all balances
-    mapping (address => uint256) public balanceOf;
-    mapping (address => mapping (address => uint256)) public allowance;
+    IProcoinDB internal db;
 
     // This generates a public event on the blockchain that will notify clients
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -23,10 +23,12 @@ contract TokenERC20 {
     function TokenERC20(
         uint256 initialSupply,
         string tokenName,
-        string tokenSymbol
+        string tokenSymbol,
+        address procoinDB
     ) public {
-        totalSupply = initialSupply;
-        balanceOf[msg.sender] = totalSupply;                // Give the creator all initial tokens
+        db = IProcoinDB(procoinDB);
+
+        totalSupply = initialSupply * 10 ** uint256(decimals);       // It's "totalSupply = initialSupply" in our case
         name = tokenName;                                   // Set the name for display purposes
         symbol = tokenSymbol;                               // Set the symbol for display purposes
     }
@@ -37,18 +39,25 @@ contract TokenERC20 {
     function _transfer(address _from, address _to, uint _value) internal {
         // Prevent transfer to 0x0 address
         require(_to != 0x0);
-        // Check if the sender has enough
-        require(balanceOf[_from] >= _value);
-        // Check for overflows
-        require(balanceOf[_to] + _value > balanceOf[_to]);
-        // Save this for an assertion in the future
-        uint previousBalances = balanceOf[_from] + balanceOf[_to];
 
-        balanceOf[_from] -= _value;
-        balanceOf[_to] += _value;
+        uint balanceFrom = balanceOf(_from);
+        uint balanceTo = balanceOf(_to);
+
+        // Check if the sender has enough
+        require(balanceFrom >= _value);
+        // Check for overflows
+        require(balanceTo + _value > balanceTo );
+        // Save this for an assertion in the future
+        uint previousBalances = balanceFrom + balanceTo;
+
+        db.setBalance(_from, balanceFrom - _value);
+        db.setBalance(_to, balanceTo + _value);
         Transfer(_from, _to, _value);
         // Asserts are used to use static analysis to find bugs in your code. They should never fail
-        assert(balanceOf[_from] + balanceOf[_to] == previousBalances);
+        balanceFrom = db.balanceOf(_from);
+        balanceTo = db.balanceOf(_to);
+
+        assert(balanceFrom + balanceTo == previousBalances);
     }
 
     /**
@@ -73,8 +82,9 @@ contract TokenERC20 {
      * @param _value the amount to send
      */
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-        require(_value <= allowance[_from][msg.sender]);     // Check allowance
-        allowance[_from][msg.sender] -= _value;
+        uint256 allowance = db.allowance(_from, msg.sender);
+        require(_value <= allowance);     // Check allowance
+        db.approve(_from, msg.sender, allowance - _value);
         _transfer(_from, _to, _value);
         return true;
     }
@@ -89,11 +99,23 @@ contract TokenERC20 {
      */
     function approve(address _spender, uint256 _value) public
         returns (bool success) {
-        allowance[msg.sender][_spender] = _value;
+        db.approve(msg.sender, _spender, _value);
         Approval(msg.sender, _spender, _value);
 
         return true;
     }
 
+    function allowance(address owner, address spender) public view returns (uint256) {
+      return db.allowance(owner, spender);
+    }
+
+    function balanceOf(address account) public view returns(uint256) {
+      return db.balanceOf(account);
+    }
+
+    function update(address newContract) public {
+        db.changeOwner(newContract, true); // Give new contract write permissions
+        db.changeOwner(this, false); // Revokes it's own permissions
+    }
 }
 

@@ -1,14 +1,24 @@
 import assertRevert from './helpers/assertRevert';
 
-const Procoin = artifacts.require("Procoin");
+let Procoin = artifacts.require("Procoin");
+let ProcoinDB = artifacts.require("ProcoinDB");
 
 contract('TokenERC20 methods', async (accounts) => {
   let procoin;
+  let procoinDB;
   let initBalanceOne;
   let initBalanceTwo;
 
-  beforeEach(async function() {
+  before(async () => {
     procoin = await Procoin.deployed();
+    procoinDB = await ProcoinDB.deployed();
+    let totalSupply = await procoin.totalSupply();
+
+    await procoinDB.changeOwner(procoin.address, true, { from: accounts[0] });
+    await procoinDB.setBalance(accounts[0], totalSupply);
+  });
+
+  beforeEach(async () => {
     initBalanceOne = await procoin.balanceOf(accounts[0]);
     initBalanceTwo = await procoin.balanceOf(accounts[1]);
   });
@@ -19,10 +29,10 @@ contract('TokenERC20 methods', async (accounts) => {
     assert.equal(totalSupply, 10e+6);
   });
 
-  it("#balance_of", async () => {
+  it("#balanceOf", async () => {
     let balance = await procoin.balanceOf(accounts[0]);
 
-    assert.equal(balance, 10e+6);
+    assert.equal(+balance, 10e+6);
   });
 
   it("#transfer", async () => {
