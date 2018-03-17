@@ -1,7 +1,7 @@
 pragma solidity ^0.4.16;
 
 import "./TokenERC20.sol";
-import "./Owned.sol";
+import "./helpers/Owned.sol";
 
 contract Procoin is Owned, TokenERC20 {
 

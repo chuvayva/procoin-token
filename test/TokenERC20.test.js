@@ -3,62 +3,60 @@ import assertRevert from './helpers/assertRevert';
 let Procoin = artifacts.require("Procoin");
 let ProcoinDB = artifacts.require("ProcoinDB");
 
-contract('TokenERC20 methods', async (accounts) => {
+contract('TokenERC20 methods', async ([
+  alice,
+  bob,
+  charlie,
+  owner
+]) => {
   let procoin;
   let procoinDB;
-  let initBalanceOne;
-  let initBalanceTwo;
-
-  before(async () => {
-    procoin = await Procoin.deployed();
-    procoinDB = await ProcoinDB.deployed();
-    let totalSupply = await procoin.totalSupply();
-
-    await procoinDB.changeOwner(procoin.address, true, { from: accounts[0] });
-    await procoinDB.setBalance(accounts[0], totalSupply);
-  });
+  const totalSupply = 100;
 
   beforeEach(async () => {
-    initBalanceOne = await procoin.balanceOf(accounts[0]);
-    initBalanceTwo = await procoin.balanceOf(accounts[1]);
+    procoinDB = await ProcoinDB.new({ from: owner });
+    procoin = await Procoin.new(0, 'Procoin', 'pro', procoinDB.address, { from: owner });
+
+    await procoinDB.changeOwner(procoin.address, true, { from: owner });
+    await procoin.mintToken(alice, totalSupply, { from: owner });
   });
 
   it("#totalSupply", async () => {
-    let totalSupply = await procoin.totalSupply();
+    let supply = await procoin.totalSupply();
 
-    assert.equal(totalSupply, 10e+6);
+    assert.equal(supply, totalSupply);
   });
 
   it("#balanceOf", async () => {
-    let balance = await procoin.balanceOf(accounts[0]);
+    let balance = await procoin.balanceOf(alice);
 
-    assert.equal(+balance, 10e+6);
+    assert.equal(+balance, totalSupply);
   });
 
   it("#transfer", async () => {
-    let amount = 5e+6;
+    let amount = 30;
 
-    await procoin.transfer(accounts[1], amount, { from: accounts[0] });
+    await procoin.transfer(bob, amount, { from: alice });
 
-    let balanceOne = await procoin.balanceOf(accounts[0]);
-    let balanceTwo = await procoin.balanceOf(accounts[1]);
+    let balanceAlice = await procoin.balanceOf(alice);
+    let balanceBob = await procoin.balanceOf(bob);
 
-    assert.equal(balanceOne - initBalanceOne, -amount);
-    assert.equal(balanceTwo - initBalanceTwo, amount);
+    assert.equal(balanceAlice, 70);
+    assert.equal(balanceBob, 30);
   });
 
   it("#transferFrom", async () => {
-    let amount = 1e+6;
+    let amount = 40;
 
-    await assertRevert(procoin.transferFrom(accounts[1], accounts[0], amount, { from: accounts[0] }));
+    await assertRevert(procoin.transferFrom(alice, bob, amount, { from: bob }));
 
-    await procoin.approve(accounts[0], amount, { from: accounts[1] });
-    await procoin.transferFrom(accounts[1], accounts[0], amount, { from: accounts[0] });
+    await procoin.approve(bob, amount, { from: alice });
+    await procoin.transferFrom(alice, bob, amount, { from: bob });
 
-    let balanceOne = await procoin.balanceOf(accounts[0]);
-    let balanceTwo = await procoin.balanceOf(accounts[1]);
+    let balanceAlice = await procoin.balanceOf(alice);
+    let balanceBob = await procoin.balanceOf(bob);
 
-    assert.equal(balanceOne - initBalanceOne, amount);
-    assert.equal(balanceTwo - initBalanceTwo, -amount);
+    assert.equal(balanceAlice, 60);
+    assert.equal(balanceBob, 40);
   });
 })

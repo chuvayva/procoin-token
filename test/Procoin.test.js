@@ -1,50 +1,55 @@
 import assertRevert from './helpers/assertRevert';
+import ethUtil from 'ethereumjs-util'
 
-let Procoin = artifacts.require("Procoin");
-let ProcoinDB = artifacts.require("ProcoinDB");
+const Procoin = artifacts.require("Procoin");
+const ProcoinDB = artifacts.require("ProcoinDB");
 
-contract('Procoin methods', async (accounts) => {
+const formattedAddress = (address) => {
+  return  Buffer.from(ethUtil.stripHexPrefix(address), 'hex');
+};
+const formattedInt = (int) => {
+  return ethUtil.setLengthLeft(int, 32);
+};
+const formattedBytes32 = (bytes) => {
+  return ethUtil.addHexPrefix(bytes.toString('hex'));
+};
+const hashedTightPacked = (args) => {
+  return ethUtil.sha3(Buffer.concat(args));
+};
+
+contract('Procoin methods', ([
+  alice,
+  bob,
+  charlie,
+  owner
+]) => {
   let procoin;
   let procoinDB;
-  let initBalanceOne;
-  let initBalanceTwo;
-
-  before(async () => {
-    procoin = await Procoin.deployed();
-    procoinDB = await ProcoinDB.deployed();
-    let totalSupply = await procoin.totalSupply();
-
-    await procoinDB.changeOwner(procoin.address, true, { from: accounts[0] });
-    await procoinDB.setBalance(accounts[0], totalSupply);
-  });
 
   beforeEach(async () => {
-    initBalanceOne = await procoin.balanceOf(accounts[0]);
-    initBalanceTwo = await procoin.balanceOf(accounts[1]);
+    procoinDB = await ProcoinDB.new({ from: owner });
+    procoin = await Procoin.new(0, 'Procoin', 'pro', procoinDB.address, { from: owner });
+    await procoinDB.changeOwner(procoin.address, true, { from: owner });
   });
 
   it("#mintToken", async () => {
     let amount = 3e+6;
 
-    await procoin.mintToken(accounts[1], amount, { from: accounts[0] });
+    await procoin.mintToken(alice, amount, { from: owner });
 
-    let balanceOne = await procoin.balanceOf(accounts[0]);
-    let balanceTwo = await procoin.balanceOf(accounts[1]);
+    let balance = await procoin.balanceOf(alice);
 
-    assert.equal(balanceOne - initBalanceOne, 0);
-    assert.equal(balanceTwo - initBalanceTwo, amount);
+    assert.equal(balance, amount);
   });
 
   it("#freezeAccount", async () => {
-    let amount = 2e+6;
+    await procoin.freezeAccount(bob, true, { from: owner });
+    await assertRevert(procoin.transfer(alice, 123, { from: bob }));
 
-    await procoin.freezeAccount(accounts[1], true, { from: accounts[0] });
-    await assertRevert(procoin.transfer(accounts[0], amount, { from: accounts[1] }));
+    let balanceOne = await procoin.balanceOf(alice);
+    let balanceTwo = await procoin.balanceOf(bob);
 
-    let balanceOne = await procoin.balanceOf(accounts[0]);
-    let balanceTwo = await procoin.balanceOf(accounts[1]);
-
-    assert.equal(+balanceOne, +initBalanceOne);
-    assert.equal(+balanceTwo, +initBalanceTwo);
+    assert.equal(balanceOne, 0);
+    assert.equal(balanceTwo, 0);
   });
 })
