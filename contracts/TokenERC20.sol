@@ -1,8 +1,11 @@
 pragma solidity ^0.4.16;
 
 import "./IProcoinDB.sol";
+import "./helpers/SafeMath.sol";
 
 contract TokenERC20 {
+    using SafeMath for uint256;
+
     // Public variables of the token
     string public name;
     string public symbol;
@@ -45,19 +48,11 @@ contract TokenERC20 {
 
         // Check if the sender has enough
         require(balanceFrom >= _value);
-        // Check for overflows
-        require(balanceTo + _value > balanceTo );
-        // Save this for an assertion in the future
-        uint previousBalances = balanceFrom + balanceTo;
 
-        db.setBalance(_from, balanceFrom - _value);
-        db.setBalance(_to, balanceTo + _value);
+        db.setBalance(_from, balanceFrom.sub(_value));
+        db.setBalance(_to, balanceTo.add(_value));
+
         Transfer(_from, _to, _value);
-        // Asserts are used to use static analysis to find bugs in your code. They should never fail
-        balanceFrom = db.balanceOf(_from);
-        balanceTo = db.balanceOf(_to);
-
-        assert(balanceFrom + balanceTo == previousBalances);
     }
 
     /**

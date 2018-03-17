@@ -28,10 +28,9 @@ contract Procoin is Owned, TokenERC20 {
         uint balanceTo = balanceOf(_to);
 
         require(balanceFrom >= _value);                      // Check if the sender has enough
-        require(balanceTo + _value > balanceTo );            // Check for overflows
 
-        db.setBalance(_from, balanceFrom - _value);
-        db.setBalance(_to, balanceTo + _value);
+        db.setBalance(_from, balanceFrom.sub(_value));
+        db.setBalance(_to, balanceTo.add(_value));
 
         Transfer(_from, _to, _value);
     }
@@ -41,9 +40,10 @@ contract Procoin is Owned, TokenERC20 {
     /// @param mintedAmount the amount of tokens it will receive
     function mintToken(address target, uint256 mintedAmount) onlyOwner public {
         uint256 balance = db.balanceOf(target);
-        db.setBalance(target, balance + mintedAmount);
 
+        db.setBalance(target, balance.add(mintedAmount));
         totalSupply += mintedAmount;
+
         Transfer(0, this, mintedAmount);
         Transfer(this, target, mintedAmount);
     }
@@ -53,6 +53,7 @@ contract Procoin is Owned, TokenERC20 {
     /// @param freeze either to freeze it or not
     function freezeAccount(address target, bool freeze) onlyOwner public {
         frozenAccount[target] = freeze;
+
         FrozenFunds(target, freeze);
     }
 
