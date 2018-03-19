@@ -12,14 +12,14 @@ module.exports = {
       host: 'localhost',
       port: 7545,
       network_id: '*',
-      gasPrice: 10000000000
+      gasPrice: 5000000000
     },
     ropsten: {
       provider: () => {
         return new HDWalletProvider(privKey, infuraUrl)
       },
       gas: 3000000,
-      gasPrice: 10000000000,
+      gasPrice: 5000000000,
       network_id: 3
     }
   }
